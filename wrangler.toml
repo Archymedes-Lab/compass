@@ -1,0 +1,36 @@
+# compass.archymedes.xyz: Compass as a Worker + one SQLite Durable Object; the page is static assets from dist/.
+#   bun run deploy
+# Secrets (never in this file): wrangler secret put COMPASS_USERS | SESSION_KEY | TYPESAFE_API_KEY
+name = "archymedes-compass"
+main = "worker/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+# OAuth pages and API downloads must reach the Worker even for browser navigations.
+run_worker_first = ["/api/*", "/mcp", "/oauth/*", "/.well-known/*"]
+
+[[routes]]
+pattern = "compass.archymedes.xyz"
+custom_domain = true
+
+[[durable_objects.bindings]]
+name = "COMPASS"
+class_name = "CompassStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CompassStore"]
+
+# The model chooses the next alarm time. Cron only recovers a lost alarm; it does not force a paid run.
+[triggers]
+crons = ["*/15 * * * *"]
+
+[vars]
+AUTOMATION_ENABLED = "true"
+AUTOMATION_MODEL = "openai/gpt-6-luna"
+COMPASS_RECEIVING_DOMAIN = "your-inbound.resend.app"
